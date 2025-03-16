@@ -41,31 +41,40 @@ function connectDb()
     dbName=$(echo "$dbName" | awk '{print tolower($0)}')
     dbName=${dbName// /_}
 
-    if ! validateDbName "$newNameDb"; then
+    if ! validateDbName "$dbName"; then
+        echo "Error: Database name must start with a letter and can only contain letters, numbers, and underscores."
         return
     fi
 
-    if databaseExists "$newNameDb"; then
+    if ! databaseExists "$dbName"; then
+        echo "Error: Database '$dbName' does not exist."
         return
-    else
-        cd  $path/databases/$dbName || exit
-        source "$path/table_operations.sh"
-        clear
-        tableMenu
     fi
+
+    cd "$path/databases/$dbName" || exit
+        source "table_operations.sh"
+    clear
+    tableMenu
 }
 
 
 function dropDb()
 {
     read -p "Enter Name of Database to Drop : " dbName
-     if ! databaseNotExists "$dbName"; then
-        return
+
+    if databaseNotExists "$dbName"; then
+        return  
+    fi
+
+    rm -rf "$path/databases/$dbName"
+
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Database '$dbName' deleted successfully.${REST}"
     else
-        rm -rf  $path/databases/$dbName || exit
-        echo -e "${GREEN}$dbName Deleted successfully${REST}"
-      fi
+        echo -e "${RED}Error: Failed to delete database '$dbName'.${REST}"
+    fi
 }
+
 renameDb()
 {
     read -p "Enter Name of Database to rename : " dbName
