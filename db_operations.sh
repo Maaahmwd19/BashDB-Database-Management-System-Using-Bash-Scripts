@@ -13,7 +13,7 @@ function createDb()
     if databaseExists "$dbName"; then
         return
     else
-        mkdir -p "$path/databases/$dbName"
+        mkdir -p "/usr/lib/myDBMS_ITI/$dbName"
         echo -e "${GREEN}Database '$dbName' created successfully${REST}."
     fi
 }
@@ -24,10 +24,10 @@ RED='\e[31m'
 REST='\e[0m'  # Reset color
 
 listDb() {
-    if [[ -d "$path/databases" && "$(ls -A "$path/databases")" ]]; then
+    if [[ -d "/usr/lib/myDBMS_ITI" && "$(ls -A "/usr/lib/myDBMS_ITI")" ]]; then
         echo -e "${GREEN}Available Databases${REST}"
         echo -e "${GREEN}--------------------${REST}"
-        ls -1 "$path/databases" | awk '{print NR ") " $0}'
+        ls -1 "/usr/lib/myDBMS_ITI" | awk '{print NR ") " $0}'
     else
         echo -e "${RED}Error: No databases found.${REST}"
     fi
@@ -51,7 +51,7 @@ function connectDb()
         return
     fi
 
-    cd "$path/databases/$dbName" || exit
+    cd "/usr/lib/myDBMS_ITI/$dbName" || exit
         source "table_operations.sh"
     clear
     tableMenu

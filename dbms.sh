@@ -8,23 +8,29 @@ export GREEN='\e[32m'
 export YELLOW='\e[33m'
 export BLUE='\e[34m'
 export RESET='\e[0m'
+#database dirictory
+export DB_DIR="/usr/lib/myDBMS_ITI"
 
-# Ensure the database directory exists
-if [[ ! -d "$path/databases" ]]; then
-    mkdir "$path/databases"
+if [[ ! -d "$DB_DIR" ]]; then
+    echo "Creating DBMS directory at $DB_DIR..."
+    sudo mkdir -p "$DB_DIR" || { echo "Error: Failed to create directory!"; exit 1; }
+    sudo chown $(whoami):$(whoami) "$DB_DIR" || { echo "Error: Failed to set ownership!"; exit 1; }
+    
     echo -e "${GREEN}DBMS Created Successfully....${RESET}"
-fi
+else
+    echo -e "${YELLOW}DBMS Directory Already Exists....${RESET}"
+fi 
 
-# Function to display header
+
 function header() {
     echo -e "\\n${BLUE}+--------------------------------------------------------------------+"
     echo        "|                      ITI DBMS Project Telecom 45                   |"
     echo -e    "+--------------------------------------------------------------------+${RESET}\\n"
 }
 
-# Function for the main menu
+
 function mainMenu() {
-PS3="
+    PS3="
 ITI-DBMS [Select the option] >> "
    
     header
@@ -38,9 +44,9 @@ ITI-DBMS [Select the option] >> "
             "Connect to Database") connectDb ;; 
             "Drop Database") dropDb ;;
             "Rename Database") renameDb ;;
-            "Refresh Menu") clear; mainMenu; exit ;;
+            "Refresh Menu") clear; mainMenu;exit;;
             "Exit")
-                echo -e "${GREEN}Goodbye ^_^${RESET}\\n"
+                echo -e "${GREEN}\\nGood Bye ^_^ .......${RESET}\\n"
                 break
                 ;;
             *)
