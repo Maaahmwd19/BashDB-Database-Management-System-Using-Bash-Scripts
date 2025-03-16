@@ -25,10 +25,10 @@ function header() {
 # Function for the main menu
 function mainMenu() {
 PS3="
-ITI-DBMS [Select the option needed] >> "
+ITI-DBMS [Select the option] >> "
    
     header
-    source ./db_operations.sh
+    source db_operations.sh
     echo  -e "======================== Database Operations ========================\\n"
 
     select option in "Create Database" "List all Databases" "Connect to Database" "Drop Database" "Rename Database" "Refresh Menu" "Exit"; do
