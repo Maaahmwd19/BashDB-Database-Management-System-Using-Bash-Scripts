@@ -27,7 +27,6 @@ ITI-DBMS [$dbName] >> "
     done
 }
 
-
 function createTable() {
     read -p "Enter Table Name: " tableName
 
@@ -43,35 +42,46 @@ function createTable() {
 
     read -p "Enter number of columns: " tableColumns
     if ! validateColumNumber "$tableColumns"; then
-        rm -rf "$DB_DIR/$dbName/$tableName"*
+        rm -rf "$DB_DIR/$dbName/$tableName"*  
         return
     fi
 
-
+    local PK=0 
 
     for ((i = 1; i <= tableColumns; i++)); do
         read -p "Enter name of column $i: " columnName
 
-
         if ! validateColumnName "$columnName"; then
             return
         fi
-        if columnExists "$columnName"; then
-        return
-        else
+
+        if columnExists "$tableName" "$columnName"; then
+            echo "Column '$columnName' already exists!"
+            return
+        fi
+
         read -p "Enter data type (str/int): " dataType
 
         if [[ "$dataType" != "int" && "$dataType" != "str" ]]; then
             echo "Invalid data type..."
-            rm -rf "$DB_DIR/$dbName/$tableName"*  
+            rm -rf "$DB_DIR/$dbName/$tableName"*
             return
-        else
-            echo "$columnName:$dataType" >> "$DB_DIR/$dbName/$tableName.metadata"
         fi
+
+        if (( PK == 0 )); then
+            read -p "Is '$columnName' the Primary Key? (y/n): " pkValidation
+            if [[ "$pkValidation" =~ ^[Yy] ]]; then  
+                PK=1
+                echo "$columnName:$dataType:pk" >> "$DB_DIR/$dbName/$tableName.metadata"
+                continue  
+            fi
         fi
+
+        echo "$columnName:$dataType" >> "$DB_DIR/$dbName/$tableName.metadata"
+
     done
 
-    echo -e "{$GREEN}Table '$tableName' created successfully with $tableColumns columns!{$REST}"
+    echo -e "${GREEN}Table '$tableName' created successfully with $tableColumns columns!${REST}"
 }
 
 
@@ -80,34 +90,126 @@ function listTables() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
 
     if [[ -d "$dbPath" && "$(ls -A "$dbPath")" ]]; then
-        echo -e "${GREEN}Available Tables${REST}"
+        echo -e "${GREEN}\\nAvailable Tables${REST}"
         echo -e "${GREEN}--------------------${REST}"
         ls -1 "$dbPath" | grep -v '\.metadata$' | awk '{print NR ") " $0}'
     else
-        echo -e "${RED}Error: No Tables found.${REST}"
+        echo -e "${RED}\\n$dbName/_db dose not have any tables.....${REST}"
     fi
 }
 
 
 function dropTable()
 {
-    echo "Drop table"
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    read -p "Enter Table Name To drop: " tableName
+    
+    
+    if tableNotExists "$tableName" ; then
+    return
+    fi
+
+     rm -rf "$dbPath/$tableName"*
+
+    if [ ! -f "$dbPath/$tableName.meta" ]; then
+        echo -e "${GREEN}Table '$tableName' deleted successfully.${REST}"
+    else
+        echo -e "${RED}Error: Failed to delete table '$tableName'.${REST}"
+    fi
+}
+
+
+function selectFromTable()
+{
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+
+    read -p "Enter Table name to retrive Data: " tableName
+    if tableNotExists "$tableName";then
+    return
+    fi
+
+    # table header 
+    # ============
+    awk -F':' 'BEGIN {header = ""; border = "+"}
+
+    {
+        header = header sprintf("| %-10s ", $1);
+        border = border "------------+"
+    }
+
+    END {
+        print border;
+        print header "|";
+        print border;
+    }' "$dbPath/$tableName.metadata"
+
+    # table contant
+    # ==============
+    awk -F',' '
+    {
+        if (NR == 1) numCols = NF;  
+        printf "|";
+        for (i = 1; i <= NF; i++) {
+            printf " %-10s |", $i;
+        }
+        print "";
+
+        rowCount = NR;  
+    }
+
+    END {
+        if (rowCount > 0) {
+            # Print bottom border
+            printf "+";
+            for (i = 1; i <= numCols; i++) {
+                printf "------------+";
+            }
+            print "";
+            print rowCount " rows in set";
+        } else {
+            print "Table is empty";
+        }
+    }' "$dbPath/$tableName"
+
+
 }
 
 function insertIntoTable()
 {
-    echo "selectFromTable"
-}
-function selectFromTable()
-{
-    echo "selectFromTable"
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    read -p "Enter Table name to Insert Data: " tableName
+    
+    if tableNotExists "$tableName";then
+    return
+    fi
+    # continue
+    
+
+
+
 }
 function deleteFromTable()
 {
-    echo "deleteFromTable"
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+
+    read -p "Enter Table name to Delete from Data: " tableName
+    if tableNotExists "$tableName";then
+    return
+    fi
+
+    #continue
+
 }
+
 function updateRow()
 {
-    echo "updateRow"
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+
+    read -p "Enter Table name to Uodate on Data: " tableName
+    if tableNotExists "$tableName";then
+    return
+    fi
+
+    #continue
 }
 
