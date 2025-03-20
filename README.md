@@ -77,7 +77,7 @@ This project is a simple yet advanced Database Management System (DBMS) implemen
 
 2. **Make the Script Executable**:
 ```bash
-chmod +x dbms.sh
+chmod y+x *.sh
 ```
 
 3. **Run the Script**:
@@ -97,6 +97,7 @@ Main Menu:
 2. List Databases
 3. Connect to Database
 4. Drop Database
+5.rename Datebase
 Enter your choice: 1
 
 Enter database name: students_db
@@ -117,12 +118,12 @@ Enter your choice: 1
 
 Enter table name: students
 Enter number of columns: 3
-Enter column 1 name (Primary Key): id
-Enter column 1 data type (int/string): int
+Enter column 1 name : id
+Enter column 1 data type (int/str): int
 Enter column 2 name: name
-Enter column 2 data type (string): string
+Enter column 2 data type (int/str): str
 Enter column 3 name: grade
-Enter column 3 data type (int): int
+Enter column 3 data type (int/str): int
 Table 'students' created successfully.
 ```
 
@@ -170,14 +171,5 @@ Record updated successfully.
 Enter the primary key (id) of the record to delete: 101
 Record deleted successfully.
 ```
-
-## **Future Enhancements**
-- **Indexing for Faster Queries**: Improve performance by implementing indexing on tables.
-- **Data Encryption**: Encrypt stored data for enhanced security.
-- **Error Handling & Logging**: Improve logging of errors and actions.
-- **Multi-User Access**: Implement access control to support multiple users.
-
-## **License**
-This project is open-source and licensed under the MIT License.
 
 
