@@ -5,7 +5,7 @@ function validateDbName() {
     local dbName="$1"
     if [[ ! $dbName =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
     
-        echo -e "${RED}Error: Database name must start with a letter and can only contain letters, numbers, and underscores.${REST}"
+        echo -e "${RED}Error: Database name must start with a letter and can only contain letters, numbers, and underscores.${RESET}"
         return 1  
     fi
     return 0  
@@ -13,9 +13,9 @@ function validateDbName() {
 
 function databaseExists() {
     local dbName="$1"
-    if [[ -d "/usr/lib/myDBMS_ITI/$dbName" ]]; then
+    if [[ -d "$DB_DIR/$dbName" ]]; then
     
-        echo -e "${RED}Error: Database '$dbName' already exists.${REST}"
+        echo -e "${RED}Error: Database '$dbName' already exists.${RESET}"
         return 0  
     fi
     return 1  
@@ -23,9 +23,9 @@ function databaseExists() {
 
 function databaseNotExists() {
     local dbName="$1"
-    if [[ ! -d "/usr/lib/myDBMS_ITI/$dbName" ]]; then
+    if [[ ! -d "$DB_DIR/$dbName" ]]; then
 
-        echo -e "${RED}Error: Database '$dbName' doesn't exist.${REST}"
+        echo -e "${RED}Error: Database '$dbName' doesn't exist.${RESET}"
         return 0 
     fi
     return 1  
@@ -35,19 +35,21 @@ function databaseNotExists() {
 
 function validateTableName() {
     local tableName="$1"
+
     if [[ ! $tableName =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
-        
-        echo -e "${RED}Error: Table name must start with a letter and can only contain letters, numbers, and underscores.${REST}"
+        echo -e "${RED}Error: Table name must start with a letter and can only contain letters, numbers, and underscores.${RESET}"
         return 1  
     fi
+
     return 0  
 }
 
+
 function tableExists() {
     local tableName="$1"
-    if [[ -f "/usr/lib/myDBMS_ITI/$dbName/$tableName" ]]; then
+    if [[ -f "$DB_DIR/$dbName/$tableName" ]]; then
         
-        echo -e "${RED}Error: Table '$tableName' already exists.${REST}"
+        echo -e "${RED}Error: Table '$tableName' already exists.${RESET}"
         return 0  
     fi
     return 1  
@@ -56,9 +58,9 @@ function tableExists() {
 
 function tableNotExists() {
     local tableName="$1"
-    if [[ ! -f "/usr/lib/myDBMS_ITI/$dbName/$tableName" ]]; then
+    if [[ ! -f "$DB_DIR/$dbName/$tableName" ]]; then
         
-        echo -e "${RED}Error: Table '$tableName' doesn't exist.${REST}"
+        echo -e "${RED}Error: Table '$tableName' doesn't exist.${RESET}"
         return 0 
     fi
     return 1  
@@ -69,7 +71,7 @@ function validateColumnName() {
     local columnName="$1"
     if [[ ! $columnName =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
         
-        echo -e "${RED}Error: Column name must start with a letter and can only contain letters, numbers, and underscores.${REST}"
+        echo -e "${RED}Error: Column name must start with a letter and can only contain letters, numbers, and underscores.${RESET}"
         rm -rf "$DB_DIR/$dbName/$tableName"*  
 
         return 1  
@@ -82,7 +84,7 @@ function validateColumNumber() {
     
     if ! [[ "$tableColumns" =~ ^[0-9]+$ && "$tableColumns" -gt 0 ]]; then
         
-        echo -e "${RED}Invalid input. Please enter a positive number.${REST}"
+        echo -e "${RED}Invalid input. Please enter a positive number.  ${RESET}"
         return 1  
     fi
     
@@ -95,7 +97,7 @@ function columnExists() {
     
     if grep -q "^$columnName:" "$metadataFile"; then
         
-        echo -e "${RED}Error: Column '$columnName' already exists in table '$tableName'.${REST}"
+        echo -e "${RED}Error: Column '$columnName' already exists in table '$tableName'.${RESET}"
         rm -rf "$DB_DIR/$dbName/$tableName"*  
         return 0  
     fi
