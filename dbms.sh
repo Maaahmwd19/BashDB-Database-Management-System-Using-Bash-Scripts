@@ -1,6 +1,6 @@
 #!/usr/bin/bash
+source db_operations.sh
 
-export path=$PWD
 
 # Colors
 export RED='\e[31m'
@@ -8,7 +8,9 @@ export GREEN='\e[32m'
 export YELLOW='\e[33m'
 export BLUE='\e[34m'
 export RESET='\e[0m'
+
 #database dirictory
+export path=$PWD
 export DB_DIR="/usr/lib/myDBMS_ITI"
 
 if [[ ! -d "$DB_DIR" ]]; then
@@ -34,7 +36,6 @@ function mainMenu() {
 ITI-DBMS [Select the option] >> "
    
     header
-    source db_operations.sh
     echo  -e "======================== Database Operations ========================\\n"
 
     select option in "Create Database" "List all Databases" "Connect to Database" "Drop Database" "Rename Database" "Refresh Menu" "Exit"; do

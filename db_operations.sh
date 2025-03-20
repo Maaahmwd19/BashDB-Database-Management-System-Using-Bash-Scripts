@@ -1,5 +1,6 @@
 #!/usr/bin/bash
 source utils.sh
+
 function createDb()
 {
     read -p "Enter Database Name: " dbName
@@ -13,23 +14,19 @@ function createDb()
     if databaseExists "$dbName"; then
         return
     else
-        mkdir -p "/usr/lib/myDBMS_ITI/$dbName"
-        echo -e "${GREEN}Database '$dbName' created successfully${REST}."
+        mkdir -p "$DB_DIR/$dbName"
+        echo -e "${GREEN}Database '$dbName' created successfully${RESET}."
     fi
 }
 
-# Define Colors
-GREEN='\e[32m'
-RED='\e[31m'
-REST='\e[0m'  # Reset color
 
 listDb() {
-    if [[ -d "/usr/lib/myDBMS_ITI" && "$(ls -A "/usr/lib/myDBMS_ITI")" ]]; then
-        echo -e "${GREEN}Available Databases${REST}"
-        echo -e "${GREEN}--------------------${REST}"
-        ls -1 "/usr/lib/myDBMS_ITI" | awk '{print NR ") " $0}'
+    if [[ -d "$DB_DIR" && "$(ls -A "$DB_DIR")" ]]; then
+        echo -e "${GREEN}Available Databases${RESET}"
+        echo -e "${GREEN}--------------------${RESET}"
+        ls -1 "$DB_DIR" | awk '{print NR ") " $0}'
     else
-        echo -e "${RED}Error: No databases found.${REST}"
+        echo -e "${RED}Error: No databases found.${RESET}"
     fi
 }
 
@@ -38,20 +35,19 @@ listDb() {
 function connectDb()
 {
     read -p "Enter Database Name to Connect: " dbName
+    
     dbName=$(echo "$dbName" | awk '{print tolower($0)}')
     dbName=${dbName// /_}
 
     if ! validateDbName "$dbName"; then
-        echo "Error: Database name must start with a letter and can only contain letters, numbers, and underscores."
         return
     fi
 
-    if ! databaseExists "$dbName"; then
-        echo "Error: Database '$dbName' does not exist."
+    if databaseNotExists "$dbName"; then
         return
     fi
 
-    cd "/usr/lib/myDBMS_ITI/$dbName" || exit
+    cd "$DB_DIR/$dbName" || exit
         source "table_operations.sh"
     clear
     tableMenu
@@ -66,12 +62,12 @@ function dropDb()
         return  
     fi
 
-    rm -rf "$path/databases/$dbName"
+    rm -rf "$DB_DIR/$dbName"
 
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Database '$dbName' deleted successfully.${REST}"
+        echo -e "${GREEN}Database '$dbName' deleted successfully.${RESET}"
     else
-        echo -e "${RED}Error: Failed to delete database '$dbName'.${REST}"
+        echo -e "${RED}Error: Failed to delete database '$dbName'.${RESET}"
     fi
 }
 
@@ -93,8 +89,8 @@ renameDb()
         if databaseExists "$newNameDb"; then
         return
         else
-        mv "$path/databases/$dbName" "$path/databases/$newNameDb"
-        echo -e "${GREEN}Database '$dbName' renamed to '$newNameDb' successfully.${REST}"
+        mv "$DB_DIR/$dbName" "$DB_DIR/$newNameDb"
+        echo -e "${GREEN}Database '$dbName' renamed to '$newNameDb' successfully.${RESET}"
         fi
     fi
 }

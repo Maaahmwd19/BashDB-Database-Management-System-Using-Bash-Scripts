@@ -67,7 +67,7 @@ function createTable() {
             rm -rf "$DB_DIR/$dbName/$tableName"*
             return
         fi
-
+ 
         if (( PK == 0 )); then
             read -p "Is '$columnName' the Primary Key? (y/n): " pkValidation
             if [[ "$pkValidation" =~ ^[Yy] ]]; then  
@@ -80,6 +80,11 @@ function createTable() {
         echo "$columnName:$dataType" >> "$DB_DIR/$dbName/$tableName.metadata"
 
     done
+
+    # handel if no primary key is set ---> set first column is as a pk
+    if (( PK == 0 )); then
+        sed -i '1s/$/:pk/' "$DB_DIR/$dbName/$tableName.metadata"
+    fi
 
     echo -e "${GREEN}Table '$tableName' created successfully with $tableColumns columns!${REST}"
 }
@@ -101,7 +106,7 @@ function listTables() {
 
 function dropTable()
 {
-    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    local dbPath="$DB_DIR/$dbName"
     read -p "Enter Table Name To drop: " tableName
     
     
