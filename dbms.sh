@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 source db_operations.sh
-
+source table_operations.sh
 
 # Colors
 export RED='\e[31m'
