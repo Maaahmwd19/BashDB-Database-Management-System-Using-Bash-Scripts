@@ -179,20 +179,53 @@ function selectFromTable()
 
 }
 
-function insertIntoTable()
-{
+function insertIntoTable() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
     read -p "Enter Table name to Insert Data: " tableName
-    
+
+   
     if tableNotExists "$tableName";then
     return
     fi
-    # continue
+    # قراءة الـ meta data (الأعمدة وأنواع البيانات)
+    declare -A columnTypes
+    local columns=()
     
+    while IFS=':' read -r colName colType; do
+        columns+=("$colName")
+        columnTypes["$colName"]="$colType"
+    done < "$tableName.metadata"
 
+    declare -a values
+    for col in "${columns[@]}"; do
+        local value
+        while true; do
+            read -p "Enter value for $col (${columnTypes[$col]}): " value
 
+            # التحقق من نوع البيانات
+            if [[ "${columnTypes[$col]}" == "int" && ! "$value" =~ ^[0-9]+$ ]]; then
+                echo "⚠️ Error: $col must be an integer."
+            elif [[ "${columnTypes[$col]}" == "float" && ! "$value" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                echo "⚠️ Error: $col must be a float."
+            elif [[ "${columnTypes[$col]}" == "string" && -z "$value" ]]; then
+                echo "⚠️ Error: $col cannot be empty."
+            else
+                break  # إذا كان الإدخال صحيحًا، نخرج من الحلقة
+            fi
+        done
+        values+=("$value")
+    done
 
+    # تكوين السطر الجديد
+    local row=$(IFS=','; echo "${values[*]}")
+
+    # إدراج الصف الجديد باستخدام `sed`
+    sudo sed -i "\$a$row" "$dbPath/$tableName"
+
+    echo "✅ Data inserted successfully into '$tableName'."
 }
+
+
 function deleteFromTable()
 {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
