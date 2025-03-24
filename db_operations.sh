@@ -1,5 +1,6 @@
 #!/usr/bin/bash
 source utils.sh
+source table_operations.sh
 
 function createDb()
 {
@@ -13,10 +14,11 @@ function createDb()
 
     if databaseExists "$dbName"; then
         return
-    else
+    fi
+        export CURRENT_DB="$dbName"  
         mkdir -p "$DB_DIR/$dbName"
         echo -e "${GREEN}Database '$dbName' created successfully${RESET}."
-    fi
+
 }
 
 
@@ -48,9 +50,8 @@ function connectDb()
     fi
 
     cd "$DB_DIR/$dbName" || exit
-        source "table_operations.sh"
     clear
-    tableMenu
+    tableMenu "$dbName"
 }
 
 

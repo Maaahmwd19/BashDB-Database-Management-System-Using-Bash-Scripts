@@ -1,6 +1,9 @@
 #!/usr/bin/bash
 source db_operations.sh
+# GUI_path="/home/mibrahim/ITI_Projects/BashDB/BashDB-Database-Management-System-Using-Bash-Scripts/DBMS_GUI/./dbmsGui.sh"
+export GuiPath=$PWD/DBMS_GUI
 
+exhi
 
 # Colors
 export RED='\e[31m'
@@ -8,7 +11,6 @@ export GREEN='\e[32m'
 export YELLOW='\e[33m'
 export BLUE='\e[34m'
 export RESET='\e[0m'
-
 #database dirictory
 export path=$PWD
 export DB_DIR="/usr/lib/myDBMS_ITI"
@@ -24,6 +26,8 @@ else
 fi 
 
 
+
+
 function header() {
     echo -e "\\n${BLUE}+--------------------------------------------------------------------+"
     echo        "|                      ITI DBMS Project Telecom 45                   |"
@@ -33,10 +37,10 @@ function header() {
 
 function mainMenu() {
     PS3="
-ITI-DBMS [Select the option] >> "
+ITI-DBMS-CLI [Select the option] >> "
    
     header
-    echo  -e "======================== Database Operations ========================\\n"
+    echo  -e "=========================== Database Operations ===========================\\n"
 
     select option in "Create Database" "List all Databases" "Connect to Database" "Drop Database" "Rename Database" "Refresh Menu" "Exit"; do
         case $option in 
@@ -48,7 +52,7 @@ ITI-DBMS [Select the option] >> "
             "Refresh Menu") clear; mainMenu;exit;;
             "Exit")
                 echo -e "${GREEN}\\nGood Bye ^_^ .......${RESET}\\n"
-                break
+                exit
                 ;;
             *)
                 echo -e "${RED}Invalid Input... Try Again.${RESET}"
@@ -56,6 +60,16 @@ ITI-DBMS [Select the option] >> "
         esac
     done
 }
+function GuiOption(){
+PS3="
+ITI-DBMS-GUI [Select the option] >> "
+select option in "Continue to CLI" "Open GIU";do 
+    case $option in
+    "Continue to CLI")mainMenu;;
+    "Open GIU") $GuiPath/./dbmsGui.sh ;;
+    *) echo -e "${RED}Invalid input..${RESET}"
+    esac
+done
 
-# Run the main menu
-mainMenu
+}
+GuiOption
