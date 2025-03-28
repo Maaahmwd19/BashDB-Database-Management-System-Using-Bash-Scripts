@@ -1,6 +1,5 @@
 #! /usr/bin/bash
 source utils.sh
-declare -f insertIntoTable
 
 tableMenu() {
    echo $1
@@ -87,7 +86,6 @@ function createTable() {
 
     done
 
-    # handel if no primary key is set ---> set first column is as a pk
     if (( PK == 0 )); then
         sed -i '1s/$/:pk/' "$DB_DIR/$dbName/$tableName.metadata"
     fi
@@ -156,6 +154,7 @@ function selectFromTable()
 
     # table contant
     # ==============
+    
     awk -F',' '
     {
         if (NR == 1) numCols = NF;  
@@ -193,35 +192,29 @@ function selectFromTableBouns() {
         return
     fi
 
-    # Read available column names
     mapfile -t columns < <(awk -F':' '{print $1}' "$dbPath/$tableName.metadata")
 
-    # Display column names
     echo "Available columns: ${columns[*]}"
 
-    # Ask user for specific columns
     read -p "Enter column names (comma-separated, * for all): " selectedCols
 
     if [[ "$selectedCols" == "*" ]]; then
-        selectedCols=$(IFS=,; echo "${columns[*]}")  # Convert array to comma-separated string
+        selectedCols=$(IFS=,; echo "${columns[*]}")
     fi
 
-    # Convert selected columns to an array
     IFS=',' read -ra selectedArr <<< "$selectedCols"
 
-    # Build indexes for selected columns
     declare -A colIndexes
     for i in "${!columns[@]}"; do
         colIndexes["${columns[$i]}"]=$((i + 1))
     done
 
-    # Generate header and border
     header=""
     border="+"
     colIndexList=()
     
     for col in "${selectedArr[@]}"; do
-        col=${col// /}  # Trim spaces
+        col=${col// /}  
         if [[ -z "${colIndexes[$col]}" ]]; then
             echo "Error: Column '$col' does not exist."
             return
@@ -235,7 +228,6 @@ function selectFromTableBouns() {
     echo "$header|"
     echo "$border"
 
-    # Print table data with selected columns
     awk -F',' -v cols="${colIndexList[*]}" '
     BEGIN {
         split(cols, selectedIndexes, " ")
@@ -260,92 +252,77 @@ function selectFromTableBouns() {
 
 function insertIntoTable() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
-    read -p "Enter Table Name to Insert Data: " tableName
+    read -p "Enter Table name to Insert Data: " tableName
 
     if tableNotExists "$tableName"; then
-        echo -e "${RED}Table does not exist.${REST}"
         return
     fi
 
-    local metaFile="$dbPath/$tableName.metadata"
-    local dataFile="$dbPath/$tableName.csv"
+    declare -A columnTypes
+    local columns=()
+    local pkColumn=""
 
-    if [[ ! -f "$metaFile" ]]; then
-        echo -e "${RED}Metadata file missing!${REST}"
+    while IFS=':' read -r colName colType colConstraint; do
+        columns+=("$colName")
+        columnTypes["$colName"]="$colType"
+        if [[ "$colConstraint" == "pk" ]]; then
+            pkColumn="$colName"
+        fi
+    done < "$tableName.metadata"
+
+    if [[ -z "$pkColumn" ]]; then
+        echo -e "${RED}Error: No primary key defined in metadata.${RESET}"
         return
     fi
 
-    # Extract column names and types from metadata
-    mapfile -t columns < <(awk -F: '{print $1}' "$metaFile")
-    mapfile -t types < <(awk -F: '{print $2}' "$metaFile")
-    local pkColumn=$(awk -F: '$3 == "pk" {print $1}' "$metaFile")
-    local pkIndex=$(awk -F: '$3 == "pk" {print NR-1}' "$metaFile")  # 0-based index
+    pkIndex=$(echo "${columns[@]}" | tr ' ' '\n' | grep -n "^$pkColumn$" | cut -d: -f1)
 
-    local numCols=${#columns[@]}
+    declare -A existingPKs
+    while IFS=',' read -r line; do
+        pkValue=$(echo "$line" | cut -d',' -f"$pkIndex")
+        existingPKs["$pkValue"]=1
+    done < "$dbPath/$tableName"
+
     declare -a values
-
-    echo -e "${GREEN}Insert Data into '$tableName':${REST}"
-
-    # Loop through columns for user input
-    for ((i = 0; i < numCols; i++)); do
+    for col in "${columns[@]}"; do
+        local value
         while true; do
-            read -p "Enter value for ${columns[i]} (${types[i]}): " input
+            read -p "Enter value for $col (${columnTypes[$col]}): " value
 
-            # Validate data type
-            case "${types[i]}" in
-                int)  
-                    [[ "$input" =~ ^[0-9]+$ ]] || { echo -e "${RED}Invalid input! Expected an integer.${REST}"; continue; }
-                    ;;
-                str)  
-                    [[ "$input" =~ ^[a-zA-Z0-9_ ]+$ ]] || { echo -e "${RED}Invalid input! Expected a string.${REST}"; continue; }
-                    ;;
-                *)  
-                    echo -e "${RED}Unknown data type '${types[i]}' in metadata.${REST}"
-                    return
-                    ;;
-            esac
-
-            values[i]="$input"
-            break
+            if [[ "${columnTypes[$col]}" == "int" && ! "$value" =~ ^[0-9]+$ ]]; then
+                echo -e "${RED}Error: $col must be an integer.${RESET}"
+            elif [[ "${columnTypes[$col]}" == "str" && -z "$value" ]]; then
+                echo -e "${RED}Error: $col cannot be empty.${RESET}"
+            elif [[ "$col" == "$pkColumn" && -n "${existingPKs[$value]}" ]]; then
+                echo -e "${RED}Error: Primary key value '$value' already exists.${RESET}"
+            else
+                break
+            fi
         done
+        values+=("$value")
     done
 
-    local pkValue=${values[$pkIndex]}
+    local row=$(IFS=','; echo "${values[*]}")
+    echo "$row" >> "$dbPath/$tableName"
+    echo -e "${GREEN}Data inserted successfully into '$tableName'.${RESET}"
+}
 
-    # Check if the primary key already exists in the CSV file
-    if [[ -f "$dataFile" ]] && awk -F, -v pk="$pkValue" -v col="$((pkIndex + 1))" 'NR > 1 && $col == pk {exit 1}' "$dataFile"; then
-        echo -e "${RED}Error: Duplicate primary key value '${pkValue}'!${REST}"
+
+function deleteFromTable() {
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    read -p "Enter Table name to delete data from: " tableName
+
+    if tableNotExists "$tableName"; then
         return
     fi
 
-    # Append the new row to the CSV file
-    echo "$(IFS=,; echo "${values[*]}")" >> "$dataFile"
-    echo -e "${GREEN}Data inserted successfully!${REST}"
 }
 
-
-function deleteFromTable()
-{
+function updateRow() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    read -p "Enter Table name to update data: " tableName
 
-    read -p "Enter Table name to Delete from Data: " tableName
-    if tableNotExists "$tableName";then
-    return
+    if tableNotExists "$tableName"; then
+        return
     fi
-
-    #continue
-
 }
-
-function updateRow()
-{
-    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
-
-    read -p "Enter Table name to Uodate on Data: " tableName
-    if tableNotExists "$tableName";then
-    return
-    fi
-
-    #continue
-}
-
