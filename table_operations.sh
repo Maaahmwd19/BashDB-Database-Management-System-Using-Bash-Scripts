@@ -90,7 +90,7 @@ function createTable() {
         sed -i '1s/$/:pk/' "$DB_DIR/$dbName/$tableName.metadata"
     fi
 
-    echo -e "${GREEN}Table '$tableName' created successfully with $tableColumns columns!${REST}"
+    echo -e "${GREEN}Table '$tableName' created successfully with $tableColumns columns!${RESET}"
 }
 
 
@@ -99,11 +99,11 @@ function listTables() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
 
     if [[ -d "$dbPath" && "$(ls -A "$dbPath")" ]]; then
-        echo -e "${GREEN}\\nAvailable Tables${REST}"
-        echo -e "${GREEN}--------------------${REST}"
+        echo -e "${GREEN}\\nAvailable Tables${RESET}"
+        echo -e "${GREEN}--------------------${RESET}"
         ls -1 "$dbPath" | grep -v '\.metadata$' | awk '{print NR ") " $0}'
     else
-        echo -e "${RED}\\n$dbName/_db dose not have any tables.....${REST}"
+        echo -e "${RED}\\n$dbName/_db dose not have any tables.....${RESET}"
     fi
 }
 
@@ -121,9 +121,9 @@ function dropTable()
      rm -rf "$dbPath/$tableName"*
 
     if [ ! -f "$dbPath/$tableName.meta" ]; then
-        echo -e "${GREEN}Table '$tableName' deleted successfully.${REST}"
+        echo -e "${GREEN}Table '$tableName' deleted successfully.${RESET}"
     else
-        echo -e "${RED}Error: Failed to delete table '$tableName'.${REST}"
+        echo -e "${RED}Error: Failed to delete table '$tableName'.${RESET}"
     fi
 }
 
@@ -307,7 +307,6 @@ function insertIntoTable() {
     echo -e "${GREEN}Data inserted successfully into '$tableName'.${RESET}"
 }
 
-
 function deleteFromTable() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
     read -p "Enter Table name to delete data from: " tableName
@@ -316,6 +315,39 @@ function deleteFromTable() {
         return
     fi
 
+    local pkColumn=""
+    local pkIndex=0
+    local index=1
+
+    # Find the primary key column and its index
+    while IFS=':' read -r colName colType colConstraint; do
+        if [[ "$colConstraint" == "pk" ]]; then
+            pkColumn="$colName"
+            pkIndex=$index
+            break
+        fi
+        ((index++))
+    done < "$tableName.metadata"
+
+    if [[ -z "$pkColumn" || "$pkIndex" -eq 0 ]]; then
+        echo -e "${RED}Error: No primary key defined in metadata.${RESET}"
+        return
+    fi
+
+    read -p "Enter $pkColumn value to delete: " pkValue
+
+    if ! grep -E "^(.*?,){$((pkIndex-1))}$pkValue(,.*)?$" "$dbPath/$tableName" > /dev/null; then
+        echo -e "${RED}Error: No record found with $pkColumn = $pkValue.${RESET}"
+        return
+    fi
+
+    grep -v -E "^(.*?,){$((pkIndex-1))}$pkValue(,.*)?$" "$dbPath/$tableName" > temp || true
+
+    > "$dbPath/$tableName"
+    cat temp >> "$dbPath/$tableName"
+    rm -f temp
+
+    echo -e "${GREEN}Record deleted successfully.${RESET}"
 }
 
 function updateRow() {
@@ -325,4 +357,70 @@ function updateRow() {
     if tableNotExists "$tableName"; then
         return
     fi
+
+    declare -A columnTypes
+    local columns=()
+    local pkColumn=""
+    local pkIndex=0
+    local index=1
+
+    while IFS=':' read -r colName colType colConstraint; do
+        columns+=("$colName")
+        columnTypes["$colName"]="$colType"
+        if [[ "$colConstraint" == "pk" ]]; then
+            pkColumn="$colName"
+            pkIndex=$index
+        fi
+        ((index++))
+    done < "$tableName.metadata"
+
+    if [[ -z "$pkColumn" || "$pkIndex" -eq 0 ]]; then
+        echo -e "${RED}Error: No primary key defined in metadata.${RESET}"
+        return
+    fi
+
+    echo "Available columns: ${columns[*]}"
+    read -p "Enter $pkColumn value to update: " pkValue
+
+    if ! grep -E "^(.*?,){$((pkIndex-1))}$pkValue(,.*)?$" "$dbPath/$tableName" > /dev/null; then
+        echo -e "${RED}Error: No record found with $pkColumn = $pkValue.${RESET}"
+        return
+    fi
+
+    read -p "Enter Column name to update: " colName
+
+    local colIndex=0
+    for i in "${!columns[@]}"; do
+        if [[ "${columns[$i]}" == "$colName" ]]; then
+            colIndex=$((i + 1))
+            break
+        fi
+    done
+
+    if [[ "$colIndex" -eq 0 ]]; then
+        echo -e "${RED}Error: Column '$colName' does not exist.${RESET}"
+        return
+    fi
+
+    if [[ "$colName" == "$pkColumn" ]]; then
+        echo -e "${RED}Error: Cannot update primary key column.${RESET}"
+        return
+    fi
+
+    read -p "Enter new value for $colName (${columnTypes[$colName]}): " newValue
+
+    if [[ "${columnTypes[$colName]}" == "int" && ! "$newValue" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}Error: $colName must be an integer.${RESET}"
+        return
+    elif [[ "${columnTypes[$colName]}" == "str" && -z "$newValue" ]]; then
+        echo -e "${RED}Error: $colName cannot be empty.${RESET}"
+        return
+    fi
+
+    awk -F',' -v pk="$pkValue" -v colIndex="$colIndex" -v newVal="$newValue" -v OFS=',' '
+    $'"$pkIndex"' == pk { $colIndex = newVal }
+    { print }
+    ' "$dbPath/$tableName" > temp && mv temp "$dbPath/$tableName"
+
+    echo -e "${GREEN}Record updated successfully.${RESET}"
 }

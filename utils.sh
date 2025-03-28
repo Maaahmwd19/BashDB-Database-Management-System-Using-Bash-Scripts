@@ -103,3 +103,6 @@ function columnExists() {
     fi
     return 1  
 }
+
+
+
