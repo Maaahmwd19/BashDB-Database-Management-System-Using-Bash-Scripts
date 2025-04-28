@@ -1,36 +1,31 @@
-#! /usr/bin/bash
+#!/usr/bin/bash
 source utils.sh
 
 tableMenu() {
-   echo $1
-    dbName="$1"  
+    echo $1
+    dbName="$1"
     PS3="
-ITI-DBMS [$dbName] >> " 
+ITI-DBMS [$dbName] >> "
     header
     echo -e "Connected to Database '$dbName' successfully......!  \\n"
 
     echo "================================= Table Operations ================================="
-    select choice in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Select from Table" "Delete from Table" "Update Row"  "Select From Table (Bonus)"  "Back to Main Menu"
+    select choice in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Select from Table" "Delete from Table" "Update Row" "Select From Table (Bonus)" "Back to Main Menu"
     do
-        case $REPLY in  
+        case $REPLY in
             1) createTable ;;
             2) listTables ;;
-            3) dropTable ;; 
-            4) insertIntoTable ;;  
+            3) dropTable ;;
+            4) insertIntoTable ;;
             5) selectFromTable ;;
             6) deleteFromTable ;;
             7) updateRow ;;
-            8) selectFromTableBouns ;;  
-            9)  cd ../..  
-                clear
-                mainMenu 
-                exit
-                ;;
+            8) selectFromTableBouns ;;
+            9) cd ../..; clear; mainMenu; exit ;;
             *) echo "Invalid option, please try again." ;;
         esac
     done
 }
-
 
 function createTable() {
     read -p "Enter Table Name: " tableName
@@ -46,12 +41,13 @@ function createTable() {
     fi
 
     read -p "Enter number of columns: " tableColumns
+
     if ! validateColumNumber "$tableColumns"; then
-        rm -rf "$DB_DIR/$dbName/$tableName"*  
+        rm -rf "$DB_DIR/$dbName/$tableName"*
         return
     fi
 
-    local PK=0 
+    local PK=0
 
     for ((i = 1; i <= tableColumns; i++)); do
         read -p "Enter name of column $i: " columnName
@@ -72,18 +68,17 @@ function createTable() {
             rm -rf "$DB_DIR/$dbName/$tableName"*
             return
         fi
- 
+
         if (( PK == 0 )); then
             read -p "Is '$columnName' the Primary Key? (y/n): " pkValidation
-            if [[ "$pkValidation" =~ ^[Yy] ]]; then  
+            if [[ "$pkValidation" =~ ^[Yy] ]]; then
                 PK=1
                 echo "$columnName:$dataType:pk" >> "$DB_DIR/$dbName/$tableName.metadata"
-                continue  
+                continue
             fi
         fi
 
         echo "$columnName:$dataType" >> "$DB_DIR/$dbName/$tableName.metadata"
-
     done
 
     if (( PK == 0 )); then
@@ -93,8 +88,6 @@ function createTable() {
     echo -e "${GREEN}Table '$tableName' created successfully with $tableColumns columns!${RESET}"
 }
 
-
-
 function listTables() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
 
@@ -103,22 +96,19 @@ function listTables() {
         echo -e "${GREEN}--------------------${RESET}"
         ls -1 "$dbPath" | grep -v '\.metadata$' | awk '{print NR ") " $0}'
     else
-        echo -e "${RED}\\n$dbName/_db dose not have any tables.....${RESET}"
+        echo -e "${RED}\\n$dbName/_db does not have any tables.....${RESET}"
     fi
 }
 
-
-function dropTable()
-{
+function dropTable() {
     local dbPath="$DB_DIR/$dbName"
     read -p "Enter Table Name To drop: " tableName
-    
-    
-    if tableNotExists "$tableName" ; then
-    return
+
+    if tableNotExists "$tableName"; then
+        return
     fi
 
-     rm -rf "$dbPath/$tableName"*
+    rm -rf "$dbPath/$tableName"*
 
     if [ ! -f "$dbPath/$tableName.meta" ]; then
         echo -e "${GREEN}Table '$tableName' deleted successfully.${RESET}"
@@ -127,49 +117,37 @@ function dropTable()
     fi
 }
 
-
-function selectFromTable()
-{
+function selectFromTable() {
     local dbPath="/usr/lib/myDBMS_ITI/$dbName"
 
-    read -p "Enter Table name to retrive Data: " tableName
-    if tableNotExists "$tableName";then
-    return
+    read -p "Enter Table name to retrieve Data: " tableName
+    if tableNotExists "$tableName"; then
+        return
     fi
 
-    # table header 
-    # ============
     awk -F':' 'BEGIN {header = ""; border = "+"}
-
     {
         header = header sprintf("| %-10s ", $1);
         border = border "------------+"
     }
-
     END {
         print border;
         print header "|";
         print border;
     }' "$dbPath/$tableName.metadata"
 
-    # table contant
-    # ==============
-    
     awk -F',' '
     {
-        if (NR == 1) numCols = NF;  
+        if (NR == 1) numCols = NF;
         printf "|";
         for (i = 1; i <= NF; i++) {
             printf " %-10s |", $i;
         }
         print "";
-
-        rowCount = NR;  
+        rowCount = NR;
     }
-
     END {
         if (rowCount > 0) {
-            # Print bottom border
             printf "+";
             for (i = 1; i <= numCols; i++) {
                 printf "------------+";
@@ -178,74 +156,6 @@ function selectFromTable()
             print rowCount " rows in set";
         } else {
             print "Table is empty";
-        }
-    }' "$dbPath/$tableName"
-
-
-}
-
-function selectFromTableBouns() {
-    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
-
-    read -p "Enter Table name to retrieve Data: " tableName
-    if tableNotExists "$tableName"; then
-        return
-    fi
-
-    mapfile -t columns < <(awk -F':' '{print $1}' "$dbPath/$tableName.metadata")
-
-    echo "Available columns: ${columns[*]}"
-
-    read -p "Enter column names (comma-separated, * for all): " selectedCols
-
-    if [[ "$selectedCols" == "*" ]]; then
-        selectedCols=$(IFS=,; echo "${columns[*]}")
-    fi
-
-    IFS=',' read -ra selectedArr <<< "$selectedCols"
-
-    declare -A colIndexes
-    for i in "${!columns[@]}"; do
-        colIndexes["${columns[$i]}"]=$((i + 1))
-    done
-
-    header=""
-    border="+"
-    colIndexList=()
-    
-    for col in "${selectedArr[@]}"; do
-        col=${col// /}  
-        if [[ -z "${colIndexes[$col]}" ]]; then
-            echo "Error: Column '$col' does not exist."
-            return
-        fi
-        colIndexList+=("${colIndexes[$col]}")
-        header+="| $(printf "%-10s" "$col") "
-        border+="------------+"
-    done
-
-    echo "$border"
-    echo "$header|"
-    echo "$border"
-
-    awk -F',' -v cols="${colIndexList[*]}" '
-    BEGIN {
-        split(cols, selectedIndexes, " ")
-    }
-    {
-        printf "|"
-        for (i in selectedIndexes) {
-            printf " %-10s |", $selectedIndexes[i]
-        }
-        print ""
-        rowCount++
-    }
-    END {
-        if (rowCount > 0) {
-            print "'$border'"
-            print rowCount " rows in set"
-        } else {
-            print "Table is empty"
         }
     }' "$dbPath/$tableName"
 }
@@ -305,6 +215,9 @@ function insertIntoTable() {
     local row=$(IFS=','; echo "${values[*]}")
     echo "$row" >> "$dbPath/$tableName"
     echo -e "${GREEN}Data inserted successfully into '$tableName'.${RESET}"
+
+    exportTableToXML "$tableName"
+    exportTableToJSON "$tableName"
 }
 
 function deleteFromTable() {
@@ -319,7 +232,6 @@ function deleteFromTable() {
     local pkIndex=0
     local index=1
 
-    # Find the primary key column and its index
     while IFS=':' read -r colName colType colConstraint; do
         if [[ "$colConstraint" == "pk" ]]; then
             pkColumn="$colName"
@@ -348,6 +260,9 @@ function deleteFromTable() {
     rm -f temp
 
     echo -e "${GREEN}Record deleted successfully.${RESET}"
+
+    exportTableToXML "$tableName"
+    exportTableToJSON "$tableName"
 }
 
 function updateRow() {
@@ -423,4 +338,81 @@ function updateRow() {
     ' "$dbPath/$tableName" > temp && mv temp "$dbPath/$tableName"
 
     echo -e "${GREEN}Record updated successfully.${RESET}"
+
+    exportTableToXML "$tableName"
+    exportTableToJSON "$tableName"
+}
+
+# --- XML Exporter ---
+function exportTableToXML() {
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    local tableName="$1"
+
+    if tableNotExists "$tableName"; then
+        return
+    fi
+
+    local xmlFile="${dbPath}/${tableName}.xml"
+    local tmpFile=$(mktemp)
+
+    echo "<table name=\"$tableName\">" > "$tmpFile"
+
+    mapfile -t columns < <(awk -F':' '{print $1}' "$dbPath/$tableName.metadata")
+
+    while IFS=',' read -r line; do
+        IFS=',' read -ra values <<< "$line"
+        echo "  <row>" >> "$tmpFile"
+        for i in "${!columns[@]}"; do
+            echo "    <${columns[$i]}>${values[$i]}</${columns[$i]}>" >> "$tmpFile"
+        done
+        echo "  </row>" >> "$tmpFile"
+    done < "$dbPath/$tableName"
+
+    echo "</table>" >> "$tmpFile"
+
+    mv "$tmpFile" "$xmlFile"
+    echo -e "${GREEN}Table '$tableName' exported automatically to XML.${RESET}"
+}
+
+# --- JSON Exporter ---
+function exportTableToJSON() {
+    local dbPath="/usr/lib/myDBMS_ITI/$dbName"
+    local tableName="$1"
+
+    if tableNotExists "$tableName"; then
+        return
+    fi
+
+    local jsonFile="${dbPath}/${tableName}.json"
+    local tmpFile=$(mktemp)
+
+    echo "{" > "$tmpFile"
+    echo "  \"table\": \"$tableName\"," >> "$tmpFile"
+    echo "  \"rows\": [" >> "$tmpFile"
+
+    mapfile -t columns < <(awk -F':' '{print $1}' "$dbPath/$tableName.metadata")
+
+    firstRow=true
+    while IFS=',' read -r line; do
+        if [[ "$firstRow" == false ]]; then
+            echo "," >> "$tmpFile"
+        fi
+        firstRow=false
+        
+        IFS=',' read -ra values <<< "$line"
+        echo "    {" >> "$tmpFile"
+        for i in "${!columns[@]}"; do
+            if [[ $i -gt 0 ]]; then
+                echo "," >> "$tmpFile"
+            fi
+            printf "      \"%s\": \"%s\"" "${columns[$i]}" "${values[$i]}" >> "$tmpFile"
+        done
+        echo -e "\n    }" >> "$tmpFile"
+    done < "$dbPath/$tableName"
+
+    echo "  ]" >> "$tmpFile"
+    echo "}" >> "$tmpFile"
+
+    mv "$tmpFile" "$jsonFile"
+    echo -e "${GREEN}Table '$tableName' exported automatically to JSON.${RESET}"
 }

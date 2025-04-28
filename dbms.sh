@@ -3,8 +3,6 @@ source db_operations.sh
 # GUI_path="/home/mibrahim/ITI_Projects/BashDB/BashDB-Database-Management-System-Using-Bash-Scripts/DBMS_GUI/./dbmsGui.sh"
 export GuiPath=$PWD/DBMS_GUI
 
-exhi
-
 # Colors
 export RED='\e[31m'
 export GREEN='\e[32m'
@@ -66,7 +64,7 @@ ITI-DBMS-GUI [Select the option] >> "
 select option in "Continue to CLI" "Open GIU";do 
     case $option in
     "Continue to CLI")mainMenu;;
-    "Open GIU") $GuiPath/./dbmsGui.sh ;;
+    "Open GIU") "$GuiPath/./dbmsGui.sh" ;;
     *) echo -e "${RED}Invalid input..${RESET}"
     esac
 done
